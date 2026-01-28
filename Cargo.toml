@@ -1,0 +1,8 @@
+[package]
+name = "pui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde_json = "1.0"
+inventory = "0.3"
