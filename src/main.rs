@@ -15,5 +15,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("{}", node::compile_list(&nodes["main"]));
 
+    println!("---------------");
+
+    nodes::out(&vec![nodes::put(&vec![nodes::add(&vec![nodes::add(&vec![serde_json::json!(6), serde_json::json!(-2)]), serde_json::json!(-2)])])]);nodes::out(&vec![serde_json::json!("world")]);if(nodes::or(&vec![serde_json::json!(false), serde_json::json!(false)]).as_bool().unwrap_or(false)){nodes::out(&vec![serde_json::json!("IF block")]);}else{if(serde_json::json!(false).as_bool().unwrap_or(false)){nodes::out(&vec![serde_json::json!("2IF block")]);}else{nodes::out(&vec![serde_json::json!("2ELSE block")]);}}
+
     Ok(())
 }

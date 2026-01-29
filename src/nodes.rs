@@ -34,6 +34,14 @@ inventory::submit! {
     }
 }
 
+inventory::submit! {
+    Node {
+        name: "nodes::or",
+        execute: or,
+        autocompile: true
+    }
+}
+
 pub fn put(input: &Vec<Value>) -> Value {
     input[0].clone()
 }
@@ -47,6 +55,14 @@ pub fn out(input: &Vec<Value>) -> Value {
 pub fn add(input: &Vec<Value>) -> Value {
     if let (Some(a), Some(b)) = (input[0].as_f64(), input[1].as_f64()) {
         return serde_json::json!(a + b);
+    }
+
+    serde_json::json!(null)
+}
+
+pub fn or(input: &Vec<Value>) -> Value {
+    if let (Some(a), Some(b)) = (input[0].as_bool(), input[1].as_bool()) {
+        return serde_json::json!(a || b);
     }
 
     serde_json::json!(null)

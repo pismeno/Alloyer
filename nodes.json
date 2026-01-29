@@ -32,7 +32,13 @@
         {
             "name": "nodes::ifelse",
             "args": [
-                false,
+                {
+                    "name": "nodes::or",
+                    "args": [
+                        false,
+                        false
+                    ]
+                },
                 [
                     {
                         "name": "nodes::out",
