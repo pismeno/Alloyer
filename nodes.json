@@ -28,6 +28,36 @@
             "args" : [
                 "world"
             ]
+        },
+        {
+            "name" : "ifelse",
+            "args" : [
+                false,
+                {
+                    "name": "out",
+                    "args": [
+                        "IF block"
+                    ]
+                },
+                {
+                    "name": "ifelse",
+                    "args": [
+                        false,
+                        {
+                            "name": "out",
+                            "args": [
+                                "2IF block"
+                            ]
+                        },
+                        {
+                            "name": "out",
+                            "args": [
+                                "2ELSE block"
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }
