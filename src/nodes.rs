@@ -4,33 +4,33 @@ use serde_json::Value;
 
 inventory::submit! {
     Node { 
-        name: "out", 
+        name: "nodes::out", 
         execute: out,
-        resolve_args: true
+        autocompile: true
     }
 }
 
 inventory::submit! {
     Node {
-        name: "put",
+        name: "nodes::put",
         execute: put,
-        resolve_args: true
+        autocompile: true
     }
 }
 
 inventory::submit! {
     Node {
-        name: "add",
+        name: "nodes::add",
         execute: add,
-        resolve_args: true
+        autocompile: true
     }
 }
 
 inventory::submit! {
     Node {
-        name: "ifelse",
+        name: "nodes::ifelse",
         execute: ifelse,
-        resolve_args: false
+        autocompile: false
     }
 }
 
@@ -53,16 +53,14 @@ pub fn add(input: &Vec<Value>) -> Value {
 }
 
 pub fn ifelse(input: &Vec<Value>) -> Value {
-    let Some(condition) = node::handle(&input[0]).as_bool() else {
-        println!("Condition is not a boolean");
-        return serde_json::json!(null);
-    };
+    let mut code = String::from("if(");
 
-    if condition {
-        node::handle(&input[1]);
-    } else {
-        node::handle(&input[2]);
-    }
+    code.push_str(&format!("{}.as_bool().unwrap_or(false)", &node::compile(&input[0])));
+    code.push_str("){");
+    code.push_str(&node::compile_list(&input[1]));
+    code.push_str("}else{");
+    code.push_str(&node::compile_list(&input[2]));
+    code.push('}');
 
-    serde_json::json!(null)
+    return Value::String(code);
 }

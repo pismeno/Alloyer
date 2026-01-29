@@ -1,62 +1,70 @@
 {
-    "main" : [
+    "main": [
         {
-            "name" : "out",
-            "args" : [
-                    {
-                        "name" : "put",
-                        "args" : [
-                            {
-                                "name" : "add",
-                                "args" : [
-                                    {
-                                        "name" : "add",
-                                        "args" : [
-                                            6,
-                                            -2
-                                        ]
-                                    },
-                                    -2
-                                ]
-                            }
-                        ]
-                    }
-                ]
-        },
-        {
-            "name" : "out",
-            "args" : [
-                "world"
-            ]
-        },
-        {
-            "name" : "ifelse",
-            "args" : [
-                false,
+            "name": "nodes::out",
+            "args": [
                 {
-                    "name": "out",
+                    "name": "nodes::put",
                     "args": [
-                        "IF block"
-                    ]
-                },
-                {
-                    "name": "ifelse",
-                    "args": [
-                        false,
                         {
-                            "name": "out",
+                            "name": "nodes::add",
                             "args": [
-                                "2IF block"
-                            ]
-                        },
-                        {
-                            "name": "out",
-                            "args": [
-                                "2ELSE block"
+                                {
+                                    "name": "nodes::add",
+                                    "args": [
+                                        6,
+                                        -2
+                                    ]
+                                },
+                                -2
                             ]
                         }
                     ]
                 }
+            ]
+        },
+        {
+            "name": "nodes::out",
+            "args": [
+                "world"
+            ]
+        },
+        {
+            "name": "nodes::ifelse",
+            "args": [
+                false,
+                [
+                    {
+                        "name": "nodes::out",
+                        "args": [
+                            "IF block"
+                        ]
+                    }
+                ],
+                [
+                    {
+                        "name": "nodes::ifelse",
+                        "args": [
+                            false,
+                            [
+                                {
+                                    "name": "nodes::out",
+                                    "args": [
+                                        "2IF block"
+                                    ]
+                                }
+                            ],
+                            [
+                                {
+                                    "name": "nodes::out",
+                                    "args": [
+                                        "2ELSE block"
+                                    ]
+                                }
+                            ]
+                        ]
+                    }
+                ]
             ]
         }
     ]
