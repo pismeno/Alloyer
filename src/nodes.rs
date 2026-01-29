@@ -69,14 +69,12 @@ pub fn or(input: &Vec<Value>) -> Value {
 }
 
 pub fn ifelse(input: &Vec<Value>) -> Value {
-    let mut code = String::from("if(");
+    let cond = node::compile(&input[0]);
+    let then_block = node::compile_list(&input[1]);
+    let else_block = node::compile_list(&input[2]);
 
-    code.push_str(&format!("{}.as_bool().unwrap_or(false)", &node::compile(&input[0])));
-    code.push_str("){");
-    code.push_str(&node::compile_list(&input[1]));
-    code.push_str("}else{");
-    code.push_str(&node::compile_list(&input[2]));
-    code.push('}');
-
-    return Value::String(code);
+    Value::String(format!(
+        "if({}.as_bool().unwrap_or(false)){{{}}}else{{{}}}",
+        cond, then_block, else_block
+    ))
 }

@@ -38,13 +38,13 @@ pub fn compile(node: &Value) -> String {
             return String::new();
         };
         
-        if (reg_node.autocompile) {
+        if reg_node.autocompile {
             let processed_aargs: Vec<String>  = args.iter()
                 .map(|a| compile(a)) 
                 .collect();
             return format!("{}(&vec![{}])", name, processed_aargs.join(", "));
         } else {
-            let compiled = ((reg_node.execute)(args));
+            let compiled = (reg_node.execute)(args);
             let Some(code) = compiled.as_str() else {
                 println!("Invalid compile method");
                 return String::new();
