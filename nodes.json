@@ -1,22 +1,33 @@
 {
     "main" : [
         {
-            "name" : "put",
-            "args" : {
-                "0" : "Hell00"
-            },
-            "follow_up": {
-                "name" : "out",
-                "args" : {
-                    "0" : "Hello"
-                }
-            }
+            "name" : "out",
+            "args" : [
+                    {
+                        "name" : "put",
+                        "args" : [
+                            {
+                                "name" : "add",
+                                "args" : [
+                                    {
+                                        "name" : "add",
+                                        "args" : [
+                                            6,
+                                            -2
+                                        ]
+                                    },
+                                    -2
+                                ]
+                            }
+                        ]
+                    }
+                ]
         },
         {
             "name" : "out",
-            "args" : {
-                "0" : "world"
-            }
+            "args" : [
+                "world"
+            ]
         }
     ]
 }

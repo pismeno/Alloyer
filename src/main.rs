@@ -25,30 +25,35 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn handle_node(node: &Value) {
+fn handle_node(node: &Value) -> Value {
     if let Some(name) = node["name"].as_str() {
-        let args = &node["args"];
-        if let Some(reg_node) = inventory::iter::<Node>().into_iter().find(|n| n.name == name) {
-            if (reg_node.has_follow_up) {
-                let returned = (reg_node.execute)(args.clone());
-                handle_follow_up(node["follow_up"]["name"].clone(), returned);
+        if let Some(args) = node["args"].as_array() {
+
+            let processed_args: Vec<Value> = match node["args"].as_array() {
+                Some(args) => args
+                    .iter()
+                    .map(|arg| {
+                        if arg.is_object() {
+                            // If it's a node, resolve it first
+                            handle_node(arg)
+                        } else {
+                            // If it's a simple entry (string/number), just clone it
+                            arg.clone()
+                        }
+                    })
+                    .collect(),
+                None => Vec::new(),
+            };
+
+            if let Some(reg_node) = inventory::iter::<Node>().into_iter().find(|n| n.name == name) {
+                return (reg_node.execute)(&processed_args);
             } else {
-                (reg_node.execute)(args.clone());
+                println!("No registered node found for name: {}", name);
             }
-        } else {
-            println!("No registered node found for name: {}", name);
         }
     } else {
         println!("Failed to get name of node");
     }
-}
 
-fn handle_follow_up(name_value: Value, args: Value) {
-    if let Some(name) =  name_value.as_str() {
-        if let Some(reg_node) = inventory::iter::<Node>().into_iter().find(|n| n.name == name) {
-            (reg_node.execute)(args.clone());
-        } else {
-            println!("No registered node found for name: {}", name);
-        }
-    }
+    serde_json::json!(null)
 }
