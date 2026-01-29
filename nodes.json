@@ -1,7 +1,7 @@
 {
     "main": [
         {
-            "name": "nodes::out",
+            "name": "examplepl::pl_out",
             "args": [
                 {
                     "name": "nodes::put",

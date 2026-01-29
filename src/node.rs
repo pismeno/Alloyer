@@ -1,11 +1,15 @@
 use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 
-
-pub struct Node {
-    pub name: &'static str,
+#[derive(Clone)]
+struct Node {
+    pub name: String,
     pub execute: fn(&Vec<Value>) -> Value,
     pub autocompile: bool
 }
+
+static NODE_REGISTRY: OnceLock<Mutex<HashMap<String, Node>>> = OnceLock::new();
 
 pub fn compile_list(nodes: &Value) -> String {
     let mut code = String::new();
@@ -29,7 +33,7 @@ pub fn compile(node: &Value) -> String {
         let name = node["name"].as_str().unwrap();
 
         let Some(reg_node) = get_reg(name) else {
-            println!("No registered node found for name: {}", name);
+            println!("Node is not registered");
             return String::new();
         };
 
@@ -56,47 +60,25 @@ pub fn compile(node: &Value) -> String {
     }
 }
 
-pub fn handle(node: &Value) -> Value {
-    let Some(_) = node.as_object() else {
-        return node.clone();
-    };
-
-    let Some(name) = node["name"].as_str() else {
-        println!("Failed to get name of the node");
-        return serde_json::json!(null);
-    };
-
-    let Some(args) = node["args"].as_array() else {
-        println!("Failed to get args of the node");
-        return serde_json::json!(null);
-    };
-
-    let Some(reg_node) = get_reg(name) else {
-        println!("No registered node found for name: {}", name);
-        return serde_json::json!(null);
-    };
-
-    let processed_args = if reg_node.autocompile {
-        process_args(&args)
-    } else {
-        args.clone()
-    };
-    
-    return (reg_node.execute)(&processed_args);
+/// Returns a reference to the global map, initializing it if necessary
+fn get_registry() -> &'static Mutex<HashMap<String, Node>> {
+    NODE_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-pub fn get_reg(name: &str) -> Option<&Node> {
-    inventory::iter::<Node>().into_iter().find(|n| n.name == name)
+pub fn register(name: &str, execute: fn(&Vec<Value>) -> Value, autocompile: bool) {
+    let registry = get_registry();
+    let mut map: std::sync::MutexGuard<'_, HashMap<String, Node>> = registry.lock().unwrap();
+    let node = Node {
+        name: name.to_string(),
+        execute: execute,
+        autocompile: autocompile
+    };
+    map.insert(name.to_string(), node);
+    println!("{}, {}", name, autocompile)
 }
 
-pub fn process_args(args: &[Value]) -> Vec<Value> {
-    args.iter()
-        .map(|arg| {
-            if arg.is_object() {
-                handle(arg)
-            } else {
-                arg.clone()
-            }
-        })
-        .collect()
+pub fn get_reg(name: &str) -> Option<Node> {
+    let registry = get_registry();
+    let map = registry.lock().unwrap();
+    map.get(name).cloned()
 }

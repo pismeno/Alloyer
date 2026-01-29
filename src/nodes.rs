@@ -1,45 +1,13 @@
 use crate::node;
-use crate::node::Node;
+
 use serde_json::Value;
 
-inventory::submit! {
-    Node { 
-        name: "nodes::out", 
-        execute: out,
-        autocompile: true
-    }
-}
-
-inventory::submit! {
-    Node {
-        name: "nodes::put",
-        execute: put,
-        autocompile: true
-    }
-}
-
-inventory::submit! {
-    Node {
-        name: "nodes::add",
-        execute: add,
-        autocompile: true
-    }
-}
-
-inventory::submit! {
-    Node {
-        name: "nodes::ifelse",
-        execute: ifelse,
-        autocompile: false
-    }
-}
-
-inventory::submit! {
-    Node {
-        name: "nodes::or",
-        execute: or,
-        autocompile: true
-    }
+pub fn init() {
+    node::register("nodes::out", out, true);
+    node::register("nodes::put", put, true);
+    node::register("nodes::add", add, true);
+    node::register("nodes::ifelse", ifelse, false);
+    node::register("nodes::or", or, true);
 }
 
 pub fn put(input: &Vec<Value>) -> Value {
