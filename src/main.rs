@@ -19,6 +19,7 @@ fn compile_all() -> Result<(), Box<dyn Error>> {
     use libloading::{Library, Symbol};
 
     fn main() -> Result<(), Box<dyn std::error::Error>> {
+    unsafe {
     ".to_string();
 
     let file = File::open("nodes.json")?;
@@ -27,7 +28,7 @@ fn compile_all() -> Result<(), Box<dyn Error>> {
 
     main_code.push_str(&node::import_functions(&nodes["main"]));
     main_code.push_str(&node::compile_list(&nodes["main"]));
-    main_code.push_str("\n    Ok(())\n}");
+    main_code.push_str("\n}Ok(())\n}");
 
     println!("{}", main_code);
     Ok(())

@@ -51,7 +51,7 @@ fn process_recursive(node: &Value, imports: &mut String, imported: &mut Vec<Stri
         }
 
         imports.push_str(&format!(
-            "    let {}__{}: Symbol<unsafe extern \"C\" fn(&Vec<Value>) -> Value> = lib_{}.get(b\"{}\")?;\n",
+            "    let {}__{}: Symbol<unsafe extern \"Rust\" fn(&Vec<Value>) -> Value> = lib_{}.get(b\"{}\")?;\n",
             namespace, func_name, namespace, func_name
         ));
 
