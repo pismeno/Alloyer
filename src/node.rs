@@ -15,6 +15,8 @@ static NODE_REGISTRY: OnceLock<Mutex<HashMap<String, Node>>> = OnceLock::new();
 static IMPORTED: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
 static NAMESPACES_LOADED: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
 
+static CURRENT_NAMESPACE: OnceLock<Mutex<String>> = OnceLock::new();
+
 pub fn import_functions(nodes: &Value) -> String {
     let imported_lock = IMPORTED.get_or_init(|| Mutex::new(Vec::new()));
     let namespaces_lock = NAMESPACES_LOADED.get_or_init(|| Mutex::new(Vec::new()));
@@ -120,6 +122,21 @@ fn get_registry() -> &'static Mutex<HashMap<String, Node>> {
     NODE_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+pub fn set_current_namespace(namespace: &str) {
+    let mutex = CURRENT_NAMESPACE.get_or_init(|| Mutex::new(String::from("default")));
+    if let Ok(mut guard) = mutex.lock() {
+        *guard = namespace.to_string();
+    }
+}
+
+fn get_current_namespace() -> String {
+    CURRENT_NAMESPACE
+        .get()
+        .and_then(|m| m.lock().ok())
+        .map(|guard| guard.clone())
+        .unwrap_or_else(|| "".to_string())
+}
+
 pub fn register(name: &str, execute: fn(&Vec<Value>) -> Value, autocompile: bool) {
     let registry = get_registry();
     let mut map: std::sync::MutexGuard<'_, HashMap<String, Node>> = registry.lock().unwrap();
@@ -127,7 +144,7 @@ pub fn register(name: &str, execute: fn(&Vec<Value>) -> Value, autocompile: bool
         execute: execute,
         autocompile: autocompile
     };
-    map.insert(name.to_string(), node);
+    map.insert(format!("{}:{}", get_current_namespace(), name), node);
     println!("{}, {}", name, autocompile)
 }
 
