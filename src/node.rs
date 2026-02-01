@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 #[derive(Clone)]
-struct Node {
-    pub name: String,
+pub struct Node {
     pub execute: fn(&Vec<Value>) -> Value,
     pub autocompile: bool
 }
@@ -60,7 +59,6 @@ pub fn compile(node: &Value) -> String {
     }
 }
 
-/// Returns a reference to the global map, initializing it if necessary
 fn get_registry() -> &'static Mutex<HashMap<String, Node>> {
     NODE_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
 }
@@ -69,7 +67,6 @@ pub fn register(name: &str, execute: fn(&Vec<Value>) -> Value, autocompile: bool
     let registry = get_registry();
     let mut map: std::sync::MutexGuard<'_, HashMap<String, Node>> = registry.lock().unwrap();
     let node = Node {
-        name: name.to_string(),
         execute: execute,
         autocompile: autocompile
     };

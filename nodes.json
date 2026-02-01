@@ -1,16 +1,16 @@
 {
     "main": [
         {
-            "name": "examplepl::pl_out",
+            "name": "nodes:out",
             "args": [
                 {
-                    "name": "nodes::put",
+                    "name": "nodes:put",
                     "args": [
                         {
-                            "name": "nodes::add",
+                            "name": "nodes:add",
                             "args": [
                                 {
-                                    "name": "nodes::add",
+                                    "name": "nodes:add",
                                     "args": [
                                         6,
                                         -2
@@ -24,53 +24,9 @@
             ]
         },
         {
-            "name": "nodes::out",
+            "name": "nodes:out",
             "args": [
                 "world"
-            ]
-        },
-        {
-            "name": "nodes::ifelse",
-            "args": [
-                {
-                    "name": "nodes::or",
-                    "args": [
-                        false,
-                        false
-                    ]
-                },
-                [
-                    {
-                        "name": "nodes::out",
-                        "args": [
-                            "IF block"
-                        ]
-                    }
-                ],
-                [
-                    {
-                        "name": "nodes::ifelse",
-                        "args": [
-                            false,
-                            [
-                                {
-                                    "name": "nodes::out",
-                                    "args": [
-                                        "2IF block"
-                                    ]
-                                }
-                            ],
-                            [
-                                {
-                                    "name": "nodes::out",
-                                    "args": [
-                                        "2ELSE block"
-                                    ]
-                                }
-                            ]
-                        ]
-                    }
-                ]
             ]
         }
     ]
