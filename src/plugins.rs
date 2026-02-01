@@ -28,7 +28,7 @@ pub fn load_plugin(path: &str) {
         let name = CStr::from_ptr(raw_name).to_string_lossy().into_owned();
         node::set_current_namespace(&name);
 
-        let init_nodes: Symbol<unsafe extern "C" fn(fn(&str, fn(&Vec<Value>) -> Value, bool)) -> *const c_char> = lib.get(b"register_nodes").unwrap();
+        let init_nodes: Symbol<unsafe extern "Rust" fn(fn(&str, bool, Vec<String>, &str)) -> *const c_char> = lib.get(b"register_nodes").unwrap();
         init_nodes(node::register);
 
         let registry = get_registry();

@@ -6,8 +6,10 @@ use crate::plugins;
 
 #[derive(Clone)]
 pub struct Node {
-    pub execute: fn(&Vec<Value>) -> Value,
-    pub autocompile: bool
+    pub name: String,
+    pub autocompile: bool,
+    pub arg_types: Vec<String>,
+    pub return_type: String
 }
 
 static NODE_REGISTRY: OnceLock<Mutex<HashMap<String, Node>>> = OnceLock::new();
@@ -51,8 +53,8 @@ fn process_recursive(node: &Value, imports: &mut String, imported: &mut Vec<Stri
         }
 
         imports.push_str(&format!(
-            "    let {}__{}: Symbol<unsafe extern \"Rust\" fn(&Vec<Value>) -> Value> = lib_{}.get(b\"{}\")?;\n",
-            namespace, func_name, namespace, func_name
+            "    let {}__{}: Symbol<unsafe extern \"Rust\" fn({}) -> {}> = lib_{}.get(b\"{}\")?;\n",
+            namespace, func_name, reg_node.arg_types.join(", "), reg_node.return_type, namespace, func_name
         ));
 
         imported.push(name.to_string());
@@ -104,17 +106,21 @@ pub fn compile(node: &Value) -> String {
                 .map(|a| compile(a)) 
                 .collect();
             let Some((namespace, func_name)) = name.split_once(':') else { return String::new(); };
-            return format!("{}__{}(&vec![{}])", namespace, func_name, processed_aargs.join(", "));
+            return format!("{}__{}({})", namespace, func_name, processed_aargs.join(", "));
         } else {
+            // TODO compiling
+            /*
             let compiled = (reg_node.execute)(args);
             let Some(code) = compiled.as_str() else {
                 println!("Invalid compile method");
                 return String::new();
             };
             return String::from(code);
+            */
+            return String::new();
         }
     } else {
-        return format!("serde_json::json!({})", node);
+        return format!("{}", node);
     }
 }
 
@@ -137,12 +143,14 @@ fn get_current_namespace() -> String {
         .unwrap_or_else(|| "".to_string())
 }
 
-pub fn register(name: &str, execute: fn(&Vec<Value>) -> Value, autocompile: bool) {
+pub fn register(name: &str, autocompile: bool, arg_types: Vec<String>, return_type: &str) {
     let registry = get_registry();
     let mut map: std::sync::MutexGuard<'_, HashMap<String, Node>> = registry.lock().unwrap();
     let node = Node {
-        execute: execute,
-        autocompile: autocompile
+        name: String::from(name),
+        autocompile: autocompile,
+        arg_types: arg_types,
+        return_type: String::from(return_type)
     };
     map.insert(format!("{}:{}", get_current_namespace(), name), node);
     println!("{}, {}", name, autocompile)
