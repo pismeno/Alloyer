@@ -4,10 +4,9 @@ use std::fs::File;
 use std::io::BufReader;
 use std::error::Error;
 use serde_json::Value;
-use std::sync::{Mutex, OnceLock};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    plugins::load_plugin("plugins/nodes.dll");
+    plugins::init_plugins();
     println!("---------------");
     compile_all()?;
     Ok(())

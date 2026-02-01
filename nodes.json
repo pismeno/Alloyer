@@ -6,27 +6,52 @@
                 {
                     "name": "nodes:put",
                     "args": [
-                        {
-                            "name": "nodes:add",
-                            "args": [
-                                {
-                                    "name": "nodes:add",
-                                    "args": [
-                                        6,
-                                        -2
-                                    ]
-                                },
-                                -2
-                            ]
-                        }
+                        "2Else block SASAD"
                     ]
                 }
             ]
         },
         {
-            "name": "nodes:out",
+            "name": "nodes:ifelse",
             "args": [
-                "world"
+                false,
+                [
+                   {
+                        "name": "nodes:out",
+                        "args": [
+                            "If block SASAD"
+                        ]
+                    }
+                ],
+                [
+                    {
+                        "name": "nodes:ifelse",
+                        "args": [
+                            false,
+                            [
+                                {
+                                    "name": "nodes:out",
+                                    "args": [
+                                        "2If block SASAD"
+                                    ]
+                                }
+                            ],
+                            [
+                                {
+                                    "name": "nodes:out",
+                                    "args": [
+                                        {
+                                            "name": "nodes:put",
+                                            "args": [
+                                                "2Else block SASAD"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        ]
+                    }
+                ]
             ]
         }
     ]

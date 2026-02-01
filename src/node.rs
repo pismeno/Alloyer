@@ -4,10 +4,13 @@ use std::sync::{Mutex, OnceLock};
 
 use crate::plugins;
 
+pub type Compiler = fn(&Value) -> String;
+pub type PluginCompiler = fn(&Value, Compiler, Compiler) -> String;
+
 #[derive(Clone)]
 pub struct Node {
     pub name: String,
-    pub autocompile: bool,
+    pub compiler: Option<PluginCompiler>,
     pub arg_types: Vec<String>,
     pub return_type: String
 }
@@ -42,8 +45,12 @@ fn process_recursive(node: &Value, imports: &mut String, imported: &mut Vec<Stri
 
     let Some(name) = node["name"].as_str() else { return };
     let Some(reg_node) = get_reg(name) else { return };
+
+    if let Some(_) = reg_node.compiler {
+        return;
+    }
     
-    if reg_node.autocompile && !imported.contains(&name.to_string()) {
+    if !imported.contains(&name.to_string()) {
         let Some((namespace, func_name)) = name.split_once(':') else { return };
         let Some(path) = plugins::get_plugin_path(namespace) else { return };
 
@@ -100,25 +107,17 @@ pub fn compile(node: &Value) -> String {
             println!("Invalid arguments");
             return String::new();
         };
+
+        if let Some(plugin_compiler) = reg_node.compiler {
+            return plugin_compiler(node, compile, compile_list);
+        };
         
-        if reg_node.autocompile {
-            let processed_aargs: Vec<String>  = args.iter()
-                .map(|a| compile(a)) 
-                .collect();
-            let Some((namespace, func_name)) = name.split_once(':') else { return String::new(); };
-            return format!("{}__{}({})", namespace, func_name, processed_aargs.join(", "));
-        } else {
-            // TODO compiling
-            /*
-            let compiled = (reg_node.execute)(args);
-            let Some(code) = compiled.as_str() else {
-                println!("Invalid compile method");
-                return String::new();
-            };
-            return String::from(code);
-            */
-            return String::new();
-        }
+
+        let processed_aargs: Vec<String>  = args.iter()
+            .map(|a| compile(a)) 
+            .collect();
+        let Some((namespace, func_name)) = name.split_once(':') else { return String::new(); };
+        return format!("{}__{}({})", namespace, func_name, processed_aargs.join(", "));
     } else {
         return format!("{}", node);
     }
@@ -143,17 +142,17 @@ fn get_current_namespace() -> String {
         .unwrap_or_else(|| "".to_string())
 }
 
-pub fn register(name: &str, autocompile: bool, arg_types: Vec<String>, return_type: &str) {
+pub fn register(name: &str, compiler: Option<PluginCompiler>, arg_types: Vec<String>, return_type: &str) {
     let registry = get_registry();
     let mut map: std::sync::MutexGuard<'_, HashMap<String, Node>> = registry.lock().unwrap();
     let node = Node {
         name: String::from(name),
-        autocompile: autocompile,
+        compiler: compiler,
         arg_types: arg_types,
         return_type: String::from(return_type)
     };
     map.insert(format!("{}:{}", get_current_namespace(), name), node);
-    println!("{}, {}", name, autocompile)
+    println!("{}", name)
 }
 
 pub fn get_reg(name: &str) -> Option<Node> {
