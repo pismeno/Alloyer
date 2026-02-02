@@ -12,5 +12,19 @@
                 "$str"
             ]
         }
+    ],
+    "printadd": [
+        {
+            "name": "nodes:out",
+            "args": [
+                {
+                    "name": "nodes:add",
+                    "args": [
+                        10,
+                        -2
+                    ]
+                }
+            ]
+        }
     ]
 }

@@ -13,5 +13,20 @@
             }
         ],
         "return_type": "()"
+    },
+    {
+        "file": "func.json",
+        "fn": "printadd",
+        "args": [
+            {
+                "name": "num",
+                "type": "i64"
+            },
+            {
+                "name": "num1",
+                "type": "i64"
+            }
+        ],
+        "return_type": "()"
     }
 ]
