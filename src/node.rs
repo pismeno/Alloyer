@@ -1,6 +1,9 @@
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::fs::File;
+use std::io::BufReader;
+use std::error::Error;
 
 use crate::plugins;
 
@@ -14,9 +17,18 @@ pub struct Node {
     pub return_type: String
 }
 
+struct FuncNode {
+    compiler: Option<PluginCompiler>,
+    arg_names: Vec<String>,
+    arg_types: Vec<String>,
+    return_type: String
+}
+
 static NODE_REGISTRY: OnceLock<Mutex<HashMap<String, Node>>> = OnceLock::new();
+static FUNC_NODE_REGISTRY: OnceLock<Mutex<HashMap<String, FuncNode>>> = OnceLock::new();
 
 static IMPORTS: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+static MOD_IMPORTS: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
 static COLLECTED_NAMESPACES: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
 
 static CURRENT_NAMESPACE: OnceLock<Mutex<String>> = OnceLock::new();
@@ -27,10 +39,11 @@ pub fn collect_imports_plugin(node: &Value) -> String {
 }
 
 pub fn collect_imports(nodes: &Value) {
-    let mut local_imports = Vec::new();
-    let mut local_namespaces = Vec::new();
+    let mut local_imports: Vec<String> = Vec::new();
+    let mut local_mod_imports: Vec<String> = Vec::new();
+    let mut local_namespaces: Vec<String> = Vec::new();
 
-    import_recursive(nodes, &mut local_imports, &mut local_namespaces);
+    import_recursive(nodes, &mut local_imports, &mut local_mod_imports, &mut local_namespaces);
 
     let imports_lock = IMPORTS.get_or_init(|| Mutex::new(Vec::new()));
     let namespaces_lock = COLLECTED_NAMESPACES.get_or_init(|| Mutex::new(Vec::new()));
@@ -50,10 +63,10 @@ pub fn collect_imports(nodes: &Value) {
     }
 }
 
-fn import_recursive(node: &Value, imports: &mut Vec<String>, collected_namespaces: &mut Vec<String>) {
+fn import_recursive(node: &Value, imports: &mut Vec<String>, mod_imports: &mut Vec<String>, collected_namespaces: &mut Vec<String>) {
     if let Some(node_list) = node.as_array() {
         for n in node_list {
-            import_recursive(n, imports, collected_namespaces);
+            import_recursive(n, imports, mod_imports, collected_namespaces);
         }
         return;
     }
@@ -70,20 +83,64 @@ fn import_recursive(node: &Value, imports: &mut Vec<String>, collected_namespace
     
     if !imports.contains(&name.to_string()) {
         let Some((namespace, _)) = name.split_once(':') else { return };
+        if let Some((json, md)) = namespace.split_once('@') { 
+            if json != "json" {
+                return;
+            }
+            mod_imports.push(md.to_string());
+         };
+
         if !collected_namespaces.contains(&namespace.to_string()) {
             collected_namespaces.push(namespace.to_string());
         }
         imports.push(name.to_string());
     }
 
-    check_args(node, imports, collected_namespaces);
-}
-
-fn check_args(node: &Value, imports: &mut Vec<String>, collected_namespaces: &mut Vec<String>) {
     let Some(args) = node["args"].as_array() else { return };
     for arg in args {
-        import_recursive(arg, imports, collected_namespaces);
+        import_recursive(arg, imports, mod_imports, collected_namespaces);
     }
+}
+
+pub fn reg_custom_nodes() -> Result<(), Box<dyn Error>> {
+    let file = File::open("nodes/nodes.json")?;
+    let reader = BufReader::new(file);
+    let nodes: Value = serde_json::from_reader(reader)?;
+
+    let Some(node_list) = nodes.as_array() else {
+        return Err("".into());
+    };
+
+    for node in node_list {
+        let Some(file) = node["file"].as_str() else {
+            return Err("".into());
+        };
+        let Some(func) = node["func"].as_str() else {
+            return Err("".into());
+        };
+        let Some(return_type) = node["return_type"].as_str() else {
+            return Err("".into());
+        };
+        let Some(args) = node["args"].as_array() else {
+            return Err("".into());
+        };
+        set_current_namespace(&format!("json@{}", file));
+        let mut arg_names: Vec<String> = Vec::new();
+        let mut arg_types: Vec<String> = Vec::new();
+        for arg in args {
+            let Some(typ) = arg["type"].as_str() else {
+                return Err("".into());
+            };
+            let Some(name) = arg["name"].as_str() else {
+                return Err("".into());
+            };
+            arg_names.push(name.to_string());
+            arg_types.push(typ.to_string());
+        }
+        register_func(func, None, arg_names, arg_types, return_type);
+    }
+
+    Ok(())
 }
 
 pub fn compile_list(nodes: &Value) -> String {
@@ -136,6 +193,10 @@ fn get_registry() -> &'static Mutex<HashMap<String, Node>> {
     NODE_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+fn get_func_registry() -> &'static Mutex<HashMap<String, FuncNode>> {
+    FUNC_NODE_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 pub fn compile_collected_imports() -> String {
     let mut code = String::new();
 
@@ -177,6 +238,22 @@ pub fn compile_collected_imports() -> String {
     return code;
 }
 
+pub fn compile_collected_mods () -> String {
+    let mut code = String::new();
+
+    let mods_lock = MOD_IMPORTS.get_or_init(|| Mutex::new(Vec::new()));
+    let mods = {
+        let lock = mods_lock.lock().unwrap();
+        lock.clone()
+    };
+
+    for md in mods {
+        code.push_str(&format!("mod {};", md));
+    }
+
+    return code;
+}
+
 pub fn set_current_namespace(namespace: &str) {
     let mutex = CURRENT_NAMESPACE.get_or_init(|| Mutex::new(String::from("default")));
     if let Ok(mut guard) = mutex.lock() {
@@ -192,9 +269,22 @@ fn get_current_namespace() -> String {
         .unwrap_or_else(|| "".to_string())
 }
 
+fn register_func(name: &str, compiler: Option<PluginCompiler>, arg_names: Vec<String> ,arg_types: Vec<String>, return_type: &str) {
+    let registry = get_func_registry();
+    let mut map: MutexGuard<'_, HashMap<String, FuncNode>> = registry.lock().unwrap();
+    let node = FuncNode {
+        compiler: compiler,
+        arg_names: arg_names,
+        arg_types: arg_types,
+        return_type: String::from(return_type)
+    };
+    map.insert(format!("{}:{}", get_current_namespace(), name), node);
+    println!("{}", name)
+}
+
 pub fn register(name: &str, compiler: Option<PluginCompiler>, arg_types: Vec<String>, return_type: &str) {
     let registry = get_registry();
-    let mut map: std::sync::MutexGuard<'_, HashMap<String, Node>> = registry.lock().unwrap();
+    let mut map: MutexGuard<'_, HashMap<String, Node>> = registry.lock().unwrap();
     let node = Node {
         compiler: compiler,
         arg_types: arg_types,
