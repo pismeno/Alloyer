@@ -1,6 +1,24 @@
 {
     "main": [
         {
+            "name": "nodes:out",
+            "args": [
+                {
+                    "name": "nodes:or",
+                    "args": [
+                        false,
+                        {
+                            "name": "nodes:or",
+                            "args": [
+                                false,
+                                true
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "name": "nodes:ifelse",
             "args": [
                 false,
@@ -16,7 +34,13 @@
                     {
                         "name": "nodes:ifelse",
                         "args": [
-                            false,
+                            {
+                                "name": "nodes:or",
+                                "args": [
+                                    true,
+                                    false
+                                ]
+                            },
                             [
                                 {
                                     "name": "nodes:out",
