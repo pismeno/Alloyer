@@ -1,17 +1,6 @@
 {
     "main": [
         {
-            "name": "nodes:out",
-            "args": [
-                {
-                    "name": "nodes:put",
-                    "args": [
-                        "2Else block SASAD"
-                    ]
-                }
-            ]
-        },
-        {
             "name": "nodes:ifelse",
             "args": [
                 false,

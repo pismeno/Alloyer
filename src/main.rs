@@ -25,7 +25,9 @@ fn compile_all() -> Result<(), Box<dyn Error>> {
     let reader = BufReader::new(file);
     let nodes: Value = serde_json::from_reader(reader)?;
 
-    main_code.push_str(&node::import_functions(&nodes["main"]));
+    node::collect_imports(&nodes["main"]);
+
+    main_code.push_str(&node::compile_collected_imports());
     main_code.push_str(&node::compile_list(&nodes["main"]));
     main_code.push_str("\n}Ok(())\n}");
 

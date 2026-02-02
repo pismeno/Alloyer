@@ -17,28 +17,57 @@ pub struct Node {
 
 static NODE_REGISTRY: OnceLock<Mutex<HashMap<String, Node>>> = OnceLock::new();
 
-static IMPORTED: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
-static NAMESPACES_LOADED: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+static IMPORTS: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+static COLLECTED_NAMESPACES: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
 
 static CURRENT_NAMESPACE: OnceLock<Mutex<String>> = OnceLock::new();
 
-pub fn import_functions(nodes: &Value) -> String {
-    let imported_lock = IMPORTED.get_or_init(|| Mutex::new(Vec::new()));
-    let namespaces_lock = NAMESPACES_LOADED.get_or_init(|| Mutex::new(Vec::new()));
+pub fn PLUGIN_COMPILER_PLACEHOLDER(x: &Value) -> String { String::new() }
 
-    let mut imported = imported_lock.lock().unwrap();
-    let mut namespaces_loaded = namespaces_lock.lock().unwrap();
-    let mut imports = String::new();
-
-    process_recursive(nodes, &mut imports, &mut imported, &mut namespaces_loaded);
-
-    imports
+pub fn collect_imports_plugin(node: &Value) -> String {
+    collect_imports(node);
+    return String::new();
 }
 
-fn process_recursive(node: &Value, imports: &mut String, imported: &mut Vec<String>, namespaces_loaded: &mut Vec<String>,) {
+pub fn collect_imports(nodes: &Value) {
+    // 1. Create local temporary buffers (No locking yet)
+    let mut local_imports = Vec::new();
+    let mut local_namespaces = Vec::new();
+
+    // 2. Process recursively using the local buffers
+    // This allows plugins to call 'collect_imports' again without deadlocking,
+    // because we aren't holding the global lock here.
+    process_recursive(nodes, &mut local_imports, &mut local_namespaces);
+
+    // 3. NOW lock the globals and merge the results
+    let imports_lock = IMPORTS.get_or_init(|| Mutex::new(Vec::new()));
+    let namespaces_lock = COLLECTED_NAMESPACES.get_or_init(|| Mutex::new(Vec::new()));
+
+    // Merge Imports
+    {
+        let mut global_imports = imports_lock.lock().unwrap();
+        for imp in local_imports {
+            if !global_imports.contains(&imp) {
+                global_imports.push(imp);
+            }
+        }
+    } // Lock released here
+
+    // Merge Namespaces
+    {
+        let mut global_namespaces = namespaces_lock.lock().unwrap();
+        for ns in local_namespaces {
+            if !global_namespaces.contains(&ns) {
+                global_namespaces.push(ns);
+            }
+        }
+    } // Lock released here
+}
+
+fn process_recursive(node: &Value, imports: &mut Vec<String>, collected_namespaces: &mut Vec<String>) {
     if let Some(node_list) = node.as_array() {
         for n in node_list {
-            process_recursive(n, imports, imported, namespaces_loaded);
+            process_recursive(n, imports, collected_namespaces);
         }
         return;
     }
@@ -46,34 +75,28 @@ fn process_recursive(node: &Value, imports: &mut String, imported: &mut Vec<Stri
     let Some(name) = node["name"].as_str() else { return };
     let Some(reg_node) = get_reg(name) else { return };
 
-    if let Some(_) = reg_node.compiler {
+    if let Some(node_compiler) = reg_node.compiler {
+        node_compiler(node, collect_imports_plugin, collect_imports_plugin);
         return;
     }
     
-    if !imported.contains(&name.to_string()) {
-        let Some((namespace, func_name)) = name.split_once(':') else { return };
-        let Some(path) = plugins::get_plugin_path(namespace) else { return };
+    if !imports.contains(&name.to_string()) {
+        let Some((namespace, _)) = name.split_once(':') else { return };
 
-        if !namespaces_loaded.contains(&namespace.to_string()) {
-            imports.push_str(&format!("    let lib_{} = Library::new(\"{}\")?;\n", namespace, path));
-            namespaces_loaded.push(namespace.to_string());
+        if !collected_namespaces.contains(&namespace.to_string()) {
+            collected_namespaces.push(namespace.to_string());
         }
 
-        imports.push_str(&format!(
-            "    let {}__{}: Symbol<unsafe extern \"Rust\" fn({}) -> {}> = lib_{}.get(b\"{}\")?;\n",
-            namespace, func_name, reg_node.arg_types.join(", "), reg_node.return_type, namespace, func_name
-        ));
-
-        imported.push(name.to_string());
+        imports.push(name.to_string());
     }
 
-    check_args(node, imports, imported, namespaces_loaded);
+    check_args(node, imports, collected_namespaces);
 }
 
-fn check_args(node: &Value, imports: &mut String, imported: &mut Vec<String>, namespaces_loaded: &mut Vec<String>) {
+fn check_args(node: &Value, imports: &mut Vec<String>, collected_namespaces: &mut Vec<String>) {
     let Some(args) = node["args"].as_array() else { return };
     for arg in args {
-        process_recursive(arg, imports, imported, namespaces_loaded);
+        process_recursive(arg, imports, collected_namespaces);
     }
 }
 
@@ -111,7 +134,6 @@ pub fn compile(node: &Value) -> String {
         if let Some(plugin_compiler) = reg_node.compiler {
             return plugin_compiler(node, compile, compile_list);
         };
-        
 
         let processed_aargs: Vec<String>  = args.iter()
             .map(|a| compile(a)) 
@@ -125,6 +147,47 @@ pub fn compile(node: &Value) -> String {
 
 fn get_registry() -> &'static Mutex<HashMap<String, Node>> {
     NODE_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+pub fn compile_collected_imports() -> String {
+    let mut code = String::new();
+
+    let namespaces_lock = COLLECTED_NAMESPACES.get_or_init(|| Mutex::new(Vec::new()));
+    let namespaces = {
+        let lock = namespaces_lock.lock().unwrap();
+        lock.clone()
+    };
+
+    for namespace in namespaces {
+        let Some(path) = plugins::get_plugin_path(&namespace) else { return code };
+        code.push_str(&format!(
+            "let lib_{} = Library::new(\"{}\")?;\n", namespace, path
+        ));
+    }
+
+
+    let imports_lock = IMPORTS.get_or_init(|| Mutex::new(Vec::new()));
+    let imports = {
+        let lock = imports_lock.lock().unwrap();
+        lock.clone()
+    };
+
+    for import in imports {
+
+        let Some(reg_node) = get_reg(&import) else {
+            println!("Node is not registered");
+            return code;
+        };
+
+        let Some((namespace, func_name)) = import.split_once(':') else { return code; };
+    
+        code.push_str(&format!(
+            "let {}__{}: Symbol<unsafe extern \"Rust\" fn({}) -> {}> = lib_{}.get(b\"{}\")?;\n",
+            namespace, func_name, reg_node.arg_types.join(", "), reg_node.return_type, namespace, func_name
+        ));
+    }
+
+    return code;
 }
 
 pub fn set_current_namespace(namespace: &str) {
