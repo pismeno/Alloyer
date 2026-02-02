@@ -1,6 +1,19 @@
 {
     "main": [
         {
+            "name": "nodes:out",
+            "args": [
+                {
+                    "name": "json@func:printnum",
+                    "args": [
+                        1,
+                        2,
+                        3
+                    ]
+                }
+            ]
+        },
+        {
             "name": "json@func:printnum",
             "args": [
                 14,

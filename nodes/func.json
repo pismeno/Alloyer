@@ -20,8 +20,33 @@
                 {
                     "name": "nodes:add",
                     "args": [
-                        10,
-                        -2
+                        "$num",
+                        "$num1"
+                    ]
+                }
+            ]
+        }
+    ],
+    "addthree": [
+        {
+            "name": "nodes:out",
+            "args": [
+                {
+                    "name": "nodes:add",
+                    "args": [
+                        "$num",
+                        {
+                            "name": "nodes:add",
+                            "args": [
+                                {
+                                    "name": "nodes:add",
+                                    "args": [
+                                        "$num1",
+                                        "$num2"
+                                    ]
+                                }
+                            ]
+                        }
                     ]
                 }
             ]

@@ -220,6 +220,12 @@ pub fn compile(node: &Value) -> String {
         let Some((namespace, func_name)) = name.split_once(':') else { return String::new(); };
         return format!("{}__{}({})", namespace, func_name, proccessed_args);
     } else {
+        if let Some(str_val) = node.as_str() {
+            if let Some(raw_code) = str_val.strip_prefix('$') {
+                return raw_code.to_string();
+            }
+        }
+
         return format!("{}", node);
     }
 }
