@@ -1,13 +1,13 @@
 {
     "printnum": [
         {
-            "name": "out",
+            "name": "nodes:out",
             "args": [
                 "$num"                
             ]
         },
         {
-            "name": "out",
+            "name": "nodes:out",
             "args": [
                 "$str"
             ]

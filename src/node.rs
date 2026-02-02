@@ -1,9 +1,11 @@
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fmt::format;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::fs::File;
 use std::io::BufReader;
 use std::error::Error;
+use std::path::Path;
 
 use crate::plugins;
 
@@ -17,11 +19,12 @@ pub struct Node {
     pub return_type: String
 }
 
-struct FuncNode {
-    compiler: Option<PluginCompiler>,
-    arg_names: Vec<String>,
-    arg_types: Vec<String>,
-    return_type: String
+#[derive(Clone)]
+pub struct FuncNode {
+    pub compiler: Option<PluginCompiler>,
+    pub arg_names: Vec<String>,
+    pub arg_types: Vec<String>,
+    pub return_type: String
 }
 
 static NODE_REGISTRY: OnceLock<Mutex<HashMap<String, Node>>> = OnceLock::new();
@@ -46,12 +49,20 @@ pub fn collect_imports(nodes: &Value) {
     import_recursive(nodes, &mut local_imports, &mut local_mod_imports, &mut local_namespaces);
 
     let imports_lock = IMPORTS.get_or_init(|| Mutex::new(Vec::new()));
+    let mod_imports_lock = MOD_IMPORTS.get_or_init(|| Mutex::new(Vec::new()));
     let namespaces_lock = COLLECTED_NAMESPACES.get_or_init(|| Mutex::new(Vec::new()));
 
     let mut global_imports = imports_lock.lock().unwrap();
     for imp in local_imports {
         if !global_imports.contains(&imp) {
             global_imports.push(imp);
+        }
+    }
+
+    let mut global_mod_imports = mod_imports_lock.lock().unwrap();
+    for imp in local_mod_imports {
+        if !global_mod_imports.contains(&imp) {
+            global_mod_imports.push(imp);
         }
     }
     
@@ -72,7 +83,7 @@ fn import_recursive(node: &Value, imports: &mut Vec<String>, mod_imports: &mut V
     }
 
     let Some(name) = node["name"].as_str() else { return };
-    let Some(reg_node) = get_reg(name) else { return };
+    let Some(reg_node) = get_any_reg(name) else { return };
 
     if let Some(node_compiler) = reg_node.compiler {
         if let Some(args) = node["args"].as_array() {
@@ -108,31 +119,32 @@ pub fn reg_custom_nodes() -> Result<(), Box<dyn Error>> {
     let nodes: Value = serde_json::from_reader(reader)?;
 
     let Some(node_list) = nodes.as_array() else {
-        return Err("".into());
+        return Err("1".into());
     };
 
     for node in node_list {
         let Some(file) = node["file"].as_str() else {
-            return Err("".into());
+            return Err("2".into());
         };
-        let Some(func) = node["func"].as_str() else {
-            return Err("".into());
+        let Some(func) = node["fn"].as_str() else {
+            return Err("3".into());
         };
         let Some(return_type) = node["return_type"].as_str() else {
-            return Err("".into());
+            return Err("4".into());
         };
         let Some(args) = node["args"].as_array() else {
-            return Err("".into());
+            return Err("5".into());
         };
-        set_current_namespace(&format!("json@{}", file));
+        let stem = Path::new(file).file_stem().unwrap().to_str().unwrap();
+        set_current_namespace(&format!("json@{}", stem));
         let mut arg_names: Vec<String> = Vec::new();
         let mut arg_types: Vec<String> = Vec::new();
         for arg in args {
             let Some(typ) = arg["type"].as_str() else {
-                return Err("".into());
+                return Err("6".into());
             };
             let Some(name) = arg["name"].as_str() else {
-                return Err("".into());
+                return Err("7".into());
             };
             arg_names.push(name.to_string());
             arg_types.push(typ.to_string());
@@ -165,13 +177,17 @@ pub fn compile(node: &Value) -> String {
     if node.is_object() {
         let name = node["name"].as_str().unwrap();
 
+        let args = &extract_args(node);
+        let proccessed_args = proccess_args(args);
+
+        if let Some(reg_node) = get_func_reg(name) {
+            let md = name.split('@').nth(1).unwrap_or("").split(':').nth(0).unwrap_or("");
+            let f_name = name.split(':').nth(1).unwrap_or("");
+            return format!("{}::{}({})", md, f_name, proccessed_args);
+        }
+
         let Some(reg_node) = get_reg(name) else {
             println!("Node is not registered");
-            return String::new();
-        };
-
-        let Some(args) = node["args"].as_array() else {
-            println!("Invalid arguments");
             return String::new();
         };
 
@@ -179,14 +195,29 @@ pub fn compile(node: &Value) -> String {
             return node_compiler(args, compile, compile_list);
         };
 
-        let processed_aargs: Vec<String>  = args.iter()
-            .map(|a| compile(a)) 
-            .collect();
         let Some((namespace, func_name)) = name.split_once(':') else { return String::new(); };
-        return format!("{}__{}({})", namespace, func_name, processed_aargs.join(", "));
+        return format!("{}__{}({})", namespace, func_name, proccessed_args);
     } else {
         return format!("{}", node);
     }
+}
+
+fn extract_args(val: &Value) -> Vec<Value> {
+    val["args"]
+        .as_array()
+        .cloned() 
+        .unwrap_or_else(|| {
+            println!("Invalid arguments");
+            vec![]
+        })
+}
+
+fn proccess_args(args: &Vec<Value>) -> String {
+    let proccessed_aargs: Vec<String>  = args.iter()
+            .map(|a| compile(a)) 
+            .collect();
+    
+    return proccessed_aargs.join(", ");
 }
 
 fn get_registry() -> &'static Mutex<HashMap<String, Node>> {
@@ -298,4 +329,24 @@ pub fn get_reg(name: &str) -> Option<Node> {
     let registry = get_registry();
     let map = registry.lock().unwrap();
     map.get(name).cloned()
+}
+
+pub fn get_func_reg(name: &str) -> Option<FuncNode> {
+    let registry = get_func_registry();
+    let map = registry.lock().unwrap();
+    map.get(name).cloned()
+}
+
+pub fn get_any_reg(name: &str) -> Option<Node> {
+    if name.starts_with("json@") {
+        let registry = get_func_registry();
+        let map = registry.lock().unwrap();
+        map.get(name).map(|f| Node {
+            compiler: f.compiler,
+            arg_types: f.arg_types.clone(),
+            return_type: f.return_type.clone(),
+        })
+    } else {
+        get_reg(name)
+    }
 }
