@@ -1,0 +1,16 @@
+{
+    "printnum": [
+        {
+            "name": "out",
+            "args": [
+                "$num"                
+            ]
+        },
+        {
+            "name": "out",
+            "args": [
+                "$str"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,78 @@
+{
+    "main": [
+        {
+            "name": "json@func:printnum",
+            "args": [
+                14,
+                "testttt"
+            ]
+        },
+        {
+            "name": "nodes:out",
+            "args": [
+                {
+                    "name": "nodes:or",
+                    "args": [
+                        false,
+                        {
+                            "name": "nodes:or",
+                            "args": [
+                                false,
+                                true
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "nodes:ifelse",
+            "args": [
+                false,
+                [
+                   {
+                        "name": "nodes:out",
+                        "args": [
+                            "If block SASAD"
+                        ]
+                    }
+                ],
+                [
+                    {
+                        "name": "nodes:ifelse",
+                        "args": [
+                            {
+                                "name": "nodes:or",
+                                "args": [
+                                    true,
+                                    false
+                                ]
+                            },
+                            [
+                                {
+                                    "name": "nodes:out",
+                                    "args": [
+                                        "2If block SASAD"
+                                    ]
+                                }
+                            ],
+                            [
+                                {
+                                    "name": "nodes:out",
+                                    "args": [
+                                        {
+                                            "name": "nodes:put",
+                                            "args": [
+                                                "2Else block SASAD"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        ]
+                    }
+                ]
+            ]
+        }
+    ]
+}

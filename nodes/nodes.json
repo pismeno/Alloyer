@@ -1,0 +1,17 @@
+[
+    {
+        "file": "func.json",
+        "fn": "printnum",
+        "args": [
+            {
+                "name": "num",
+                "type": "i64"
+            },
+            {
+                "name": "str",
+                "type": "&str"
+            }
+        ],
+        "return_type": "()"
+    }
+]
