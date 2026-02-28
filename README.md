@@ -12,3 +12,5 @@ Rust, knihovny:
 GUI:
 Nejspíš C#, knihovny:
 - Asi WPF
+# Jak spustit?
+Naklonujte si projekt, a použijte příkaz "cargo run", to zkompiluje .json soubory z 'nodes/' do Rust kódu v 'buildrs/src'. V repozitáři jsou nyní ukázkové soubory 'main.json' - standarní main funkce odkud kód běží, 'func.json' - ukázkové vlastní funkce vytvořené z již existujících nodes a 'nodes.json' - soubor kde se registrují právě vlastní funkce, je zde třeba uvést souboor, kde je funkce definována, její název, argumenty a jejich typy a return type. Aby ukázkové .json soubory fungovali, vložil jsem do classroomu i ukázkový plugin 'nodes.dll' (a jeho source kód), ten je třeba vložit v rootu projeku do složky 'plugins'.
