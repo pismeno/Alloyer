@@ -2,7 +2,7 @@
 
 An engine for programming languages that operates based on "nodes." These are written in JSON and subsequently compiled into Rust code. Each node references either another node (defined as a function in `nodes.json`) or a function from a `.dll` plugin, which the plugin registers during compilation.
 
-# Attentntion
+# Attention
 This project has been abandoned.  
 
 ## Goal
